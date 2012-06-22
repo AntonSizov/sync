@@ -12,7 +12,10 @@
     go/0,
     info/0,
     stop/0,
-    growl/1,growl/0
+    growl/1,
+	growl/0,
+	log/1,
+	log/0
 ]).
 
 %% Application Callbacks.
@@ -27,7 +30,7 @@
 -define(CHILD(I,Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
 
 %% ----------------------------------------------------------------------
-%% API 
+%% API
 %% ----------------------------------------------------------------------
 
 start() ->
@@ -52,11 +55,17 @@ info() ->
 stop() ->
     application:stop(sync).
 
-growl(Val) when is_boolean(Val) ->
+growl(Val) ->
     sync_scanner:set_growl(Val).
 
 growl() ->
     sync_scanner:get_growl().
+
+log(Val) ->
+	sync_scanner:set_log(Val).
+
+log() ->
+	sync_scanner:get_log().
 
 %% ----------------------------------------------------------------------
 %% Application Callbacks
@@ -76,7 +85,7 @@ stop(_State) ->
 
 init([]) ->
     %% Return.
-    {ok, { {one_for_one, 5, 10}, [
+    {ok, {{one_for_one, 5, 10}, [
         ?CHILD(sync_scanner, worker),
         ?CHILD(sync_options, worker)
-    ]} }.
+    ]}}.

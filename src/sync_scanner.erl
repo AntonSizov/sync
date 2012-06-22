@@ -20,7 +20,9 @@
     terminate/2,
     code_change/3,
     set_growl/1,
-    get_growl/0
+    get_growl/0,
+	set_log/1,
+	get_log/0
 ]).
 
 -define(SERVER, ?MODULE).
@@ -59,23 +61,29 @@ info() ->
 %% will just hang. So env vars is the easy copout like using the process dict
 %% TODO: make not use env_var for this :)
 set_growl(true) ->
-    sync_utils:set_env(growl,true),
-    growl_success("Sync","Notifications Enabled"),
+    sync_utils:set_env(growl, true),
+    growl_success("Sync", "Notifications Enabled"),
     ok;
 set_growl(skip_success) ->
-    growl_success("Sync","Notifications Enabled (skip success)"),
-    sync_utils:set_env(growl,skip_success),
+    growl_success("Sync", "Notifications Enabled (skip success)"),
+    sync_utils:set_env(growl, skip_success),
     ok;
 set_growl(false) ->
-    growl_success("Sync","Notifications Disabled"),
-    sync_utils:set_env(growl,false),
+    growl_success("Sync", "Notifications Disabled"),
+    sync_utils:set_env(growl, false),
     ok.
 
 get_growl() ->
-    case sync_utils:get_env(growl,true) of
+    case sync_utils:get_env(growl, true) of
         Val when is_boolean(Val) -> Val;
         _ -> true
     end.
+
+set_log(Val) ->
+	sync_utils:set_env(log, Val).
+
+get_log() ->
+	sync_utils:get_env(log, true).
 
 enable_patching() ->
     gen_server:cast(?SERVER, enable_patching),
@@ -119,7 +127,7 @@ handle_cast(discover_modules, State) ->
     NewTimers = schedule_cast(discover_modules, 30000, State#state.timers),
 
     %% Return with updated modules...
-    NewState = State#state { modules=Modules, timers=NewTimers },
+    NewState = State#state {modules=Modules, timers=NewTimers},
     {noreply, NewState};
 
 handle_cast(discover_src_dirs, State) ->
@@ -144,7 +152,7 @@ handle_cast(discover_src_dirs, State) ->
     NewTimers = schedule_cast(discover_src_dirs, 30000, State#state.timers),
 
     %% Return with updated dirs...
-    NewState = State#state { src_dirs=Dirs, timers=NewTimers },
+    NewState = State#state {src_dirs=Dirs, timers=NewTimers},
     {noreply, NewState};
 
 handle_cast(discover_src_files, State) ->
@@ -158,7 +166,7 @@ handle_cast(discover_src_files, State) ->
     NewTimers = schedule_cast(discover_src_files, 5000, State#state.timers),
 
     %% Return with updated files...
-    NewState = State#state { src_files=Files, timers=NewTimers },
+    NewState = State#state {src_files=Files, timers=NewTimers},
     {noreply, NewState};
 
 handle_cast(compare_beams, State) ->
@@ -178,7 +186,7 @@ handle_cast(compare_beams, State) ->
     NewTimers = schedule_cast(compare_beams, 2000, State#state.timers),
 
     %% Return with updated beam lastmod...
-    NewState = State#state { beam_lastmod=NewBeamLastMod, timers=NewTimers },
+    NewState = State#state {beam_lastmod=NewBeamLastMod, timers=NewTimers},
     {noreply, NewState};
 
 handle_cast(compare_src_files, State) ->
@@ -196,7 +204,7 @@ handle_cast(compare_src_files, State) ->
     NewTimers = schedule_cast(compare_src_files, 1000, State#state.timers),
 
     %% Return with updated src_file lastmod...
-    NewState = State#state { src_file_lastmod=NewSrcFileLastMod, timers=NewTimers },
+    NewState = State#state {src_file_lastmod=NewSrcFileLastMod, timers=NewTimers},
     {noreply, NewState};
 
 handle_cast(info, State) ->
@@ -206,7 +214,7 @@ handle_cast(info, State) ->
     {noreply, State};
 
 handle_cast(enable_patching, State) ->
-    NewState = State#state { patching = true },
+    NewState = State#state {patching = true},
     {noreply, NewState};
 
 handle_cast(_Msg, State) ->
@@ -451,36 +459,35 @@ growl_success(Message) ->
     growl_success("Success!", Message).
 
 growl_success(Title, Message) ->
-    case sync_utils:get_env(growl,true) of
-		true		 -> growl("success", Title, Message);			
+    case sync_utils:get_env(growl, true) of
+		true		 -> growl("success", Title, Message);
         skip_success -> ok;
         false        -> ok
     end.
 
 growl_errors(Message) ->
-	case sync_utils:get_env(growl,true) of
+	case sync_utils:get_env(growl, true) of
 		false        -> ok;
-		_			 -> growl("errors", "Errors...", Message)		
+		_			 -> growl("errors", "Errors...", Message)
     end.
 
 growl_warnings(Message) ->
-	case sync_utils:get_env(growl,true) of
+	case sync_utils:get_env(growl, true) of
 		false        -> ok;
-		_			 -> growl("warnings", "Warnings", Message)	
+		_			 -> growl("warnings", "Warnings", Message)
     end.
 
 log_success(Message) ->
 	case sync_utils:get_env(log, true) of
 		true         -> error_logger:info_msg(lists:flatten(Message));
         skip_success -> ok;
-		false		 -> ok        
+		false		 -> ok
     end.
 
 log_errors(Message) ->
 	case sync_utils:get_env(log, true) of
 		false		 -> ok;
 		_	         -> error_logger:error_msg(lists:flatten(Message))
-		        
     end.
 
 log_warnings(Message) ->
